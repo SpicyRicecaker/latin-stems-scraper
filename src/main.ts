@@ -1,13 +1,13 @@
 /* eslint-disable */
-import {chromium} from 'playwright';
+import { chromium } from 'playwright';
 import { Map } from './types/types';
 
 (async () => {
   // Recall our sources
   const sources = [
     'https://en.wikipedia.org/wiki/List_of_Greek_and_Latin_roots_in_English/A%E2%80%93G',
-    // 'https://en.wikipedia.org/wiki/List_of_Greek_and_Latin_roots_in_English/H%E2%80%93O',
-    // 'https://en.wikipedia.org/wiki/List_of_Greek_and_Latin_roots_in_English/P%E2%80%93Z',
+    'https://en.wikipedia.org/wiki/List_of_Greek_and_Latin_roots_in_English/H%E2%80%93O',
+    'https://en.wikipedia.org/wiki/List_of_Greek_and_Latin_roots_in_English/P%E2%80%93Z',
   ];
   // Create browser and new tab
   const browser = await chromium.launch({ headless: false });
@@ -33,7 +33,8 @@ import { Map } from './types/types';
             // By first getting the table headers
             const headers = tables[i]
               .querySelector('thead')
-              ?.querySelectorAll('tr');
+              ?.querySelector('tr')
+              ?.querySelectorAll('th');
             if (!headers) {
               continue;
             }
@@ -77,8 +78,6 @@ import { Map } from './types/types';
   }
   await Promise.allSettled(actions);
 
-  // console.log(await actions[0]);
-
   // Then select links
-  // await browser.close();
+  await browser.close();
 })();
