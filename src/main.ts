@@ -1,15 +1,16 @@
 /* eslint-disable */
-import puppeteer from 'puppeteer';
+import {chromium} from 'playwright';
+import { Map } from './types/types';
 
 (async () => {
   // Recall our sources
   const sources = [
     'https://en.wikipedia.org/wiki/List_of_Greek_and_Latin_roots_in_English/A%E2%80%93G',
-    'https://en.wikipedia.org/wiki/List_of_Greek_and_Latin_roots_in_English/H%E2%80%93O',
-    'https://en.wikipedia.org/wiki/List_of_Greek_and_Latin_roots_in_English/P%E2%80%93Z',
+    // 'https://en.wikipedia.org/wiki/List_of_Greek_and_Latin_roots_in_English/H%E2%80%93O',
+    // 'https://en.wikipedia.org/wiki/List_of_Greek_and_Latin_roots_in_English/P%E2%80%93Z',
   ];
   // Create browser and new tab
-  const browser = await puppeteer.launch({ headless: false });
+  const browser = await chromium.launch({ headless: false });
   const actions = [];
   // For every source
   for (let i = 0; i < sources.length; ++i) {
@@ -18,57 +19,65 @@ import puppeteer from 'puppeteer';
         // Open the page
         const page = await browser.newPage();
         await page.goto(sources[i]);
-        // Get the tables
-        const tables = await page.$$('table');
-        // Loob through tables
-        for (let i = 0; i < tables.length; i++) {
-          // First get the header
-          const thead = await tables[i].$('thead');
-          if (!thead) {
-            continue;
-          }
-          // then get th in header
-          const theadth = await thead.$$('th');
-          if (!theadth) {
-            continue;
-          }
-          // Loop through object and build object headers hopefully
-          const names = [];
-          for(let i = 0; i < theadth.length; ++i){
-            names.push(await theadth[i].getProperty('innerHTML').toString());
-          }
-          // Loop through tbody
-          const tbody = await tables[i].$('tbody');
-          if(!tbody) {
-            continue;
-          }
-          // Get rows in tbody
-          const trs = await tbody.$$('tr');
-          if(!trs){
-            continue;
-          }
-          // Create card array
+        await page.waitForSelector('table');
+        // Evaluate table
+        return page.evaluate(() => {
+          // All our cards
           const cards = [];
-          // Loop through rows
-          for(let i = 0; i < trs.length; i++){
-            // Get td
-            const tds = await trs[i].$$('td');
-            if(!tds){
+          // Get table
+          const tables = document.querySelectorAll('table');
+          // Loop through every table
+          for (let i = 0; i < tables.length; ++i) {
+            // Define our properties
+            const properties = [];
+            // By first getting the table headers
+            const headers = tables[i]
+              .querySelector('thead')
+              ?.querySelectorAll('tr');
+            if (!headers) {
               continue;
             }
-            // Create card
-            const card = {};
-            // For every td
-            for(let j = 0; j < tds.length; j++){
-              // Card with names[i] has property of tds inner html
-              card[names[j]]
+            // For each header
+            for (let j = 0; j < headers.length; ++j) {
+              // Push to properties
+              properties.push(headers[j].innerHTML);
+            }
+            // Next get all the rows in the body of the table
+            const rows = tables[i]
+              .querySelector('tbody')
+              ?.querySelectorAll('tr');
+            if (!rows) {
+              continue;
+            }
+            // For every row
+            for (let j = 0; j < rows.length; ++j) {
+              // Create an empty card to store our properties
+              const card: Map = {};
+              // Get every cell in the row
+              let cells = rows[j].querySelectorAll('td');
+              if (!cells) {
+                continue;
+              }
+              // For each cell
+              for (let k = 0; k < cells.length; ++k) {
+                // Recall our properties that we defined earlier
+                // Add innerhtml to object with property based off of k
+                if (properties[k]) {
+                  card[properties[k]] = cells[k].innerHTML;
+                }
+              }
+              // Push our finished card into our array of cards
+              cards.push(card);
             }
           }
-        }
+          return cards;
+        });
       })()
     );
   }
   await Promise.allSettled(actions);
+
+  // console.log(await actions[0]);
 
   // Then select links
   // await browser.close();
