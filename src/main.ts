@@ -1,6 +1,7 @@
 /* eslint-disable */
 import { chromium } from 'playwright';
 import { Map } from './types/types';
+import { promises as fs } from 'fs';
 
 (async () => {
   // Recall our sources
@@ -10,18 +11,18 @@ import { Map } from './types/types';
     'https://en.wikipedia.org/wiki/List_of_Greek_and_Latin_roots_in_English/P%E2%80%93Z',
   ];
   // Create browser and new tab
-  const browser = await chromium.launch({ headless: false });
+  const browser = await chromium.launch();
   const actions = [];
   // For every source
   for (let i = 0; i < sources.length; ++i) {
     actions.push(
-      (async () => {
+      (async (): Promise<any[]> => {
         // Open the page
         const page = await browser.newPage();
         await page.goto(sources[i]);
         await page.waitForSelector('table');
         // Evaluate table
-        return page.evaluate(() => {
+        return page.evaluate((): any[] => {
           // All our cards
           const cards = [];
           // Get table
@@ -76,8 +77,22 @@ import { Map } from './types/types';
       })()
     );
   }
-  await Promise.allSettled(actions);
-
+  let res = await Promise.allSettled(actions);
   // Then select links
   await browser.close();
+  // Flatten
+  // Stringify
+  // Write to file
+  await fs.writeFile(
+    'latin-stems.json',
+    JSON.stringify(
+      res.flatMap((cards, i) => {
+        if (cards.status === 'fulfilled') {
+          return cards.value;
+        } else {
+          console.log(`Source ${i} has errored.`);
+        }
+      })
+    )
+  );
 })();
